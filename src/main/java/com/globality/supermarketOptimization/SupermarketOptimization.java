@@ -81,28 +81,47 @@ public class SupermarketOptimization {
         return filterLinesByNumberOfIdsPerLine(linesWithIdsFilteredByTotalCount.stream(), MIN_NUMBER_OF_IDS_PER_LINE);
     }
 
+    /**
+     * to create a report of combinations <br/>
+     * outputFilepath required for large files, otherwise creates out of memory error
+     * @param sigma
+     * @param outputFilepath report file path. if null log the combinations found
+     * @return the report if outputFilePath is null, otherwise return nothing
+     * @throws IOException
+     */
     private String createReportOfCombinations(Integer sigma, String outputFilepath) throws IOException {
         logger.info(">createReportOfCombinations");
 
         StringBuilder stringBuilder = new StringBuilder();
 
         String headerLine = "Item size, Nb occurences, values";
-        logger.info(headerLine);
-        stringBuilder.append(headerLine);
-
-        Files.write(Paths.get(outputFilepath),headerLine.getBytes());
+        if(outputFilepath==null) {
+            logger.info(headerLine);
+            stringBuilder.append(headerLine);
+        }else{
+            Files.write(Paths.get(outputFilepath),headerLine.getBytes());
+        }
 
         combinationsCache.getIterator().forEachRemaining(
             combination -> {
-                String line = combination.getKey().split(" ").length + ", " + combination.getValue() + ", " + combination.getKey();
-                logger.info(line);
-                stringBuilder.append(System.lineSeparator());
-                stringBuilder.append(line);
-                try {
-                    Files.write(Paths.get(outputFilepath),(System.lineSeparator()+line).getBytes(), StandardOpenOption.APPEND);
-                } catch (IOException e) {
-                    logger.error("writing to file failed");
+                if(combination.getValue().count<sigma){
+                    return;
                 }
+
+                String line = combination.getKey().split(" ").length + ", " + combination.getValue() + ", " + combination.getKey();
+
+                if(outputFilepath==null) {
+                    logger.info(line);
+                    stringBuilder.append(System.lineSeparator());
+                    stringBuilder.append(line);
+                }else{
+                    try {
+                        Files.write(Paths.get(outputFilepath),(System.lineSeparator()+line).getBytes(), StandardOpenOption.APPEND);
+                    } catch (IOException e) {
+                        logger.error("writing to file failed");
+                    }
+                }
+
             }
         );
         logger.info("the combinations can be found in the output file you provided: " + outputFilepath);
@@ -111,6 +130,7 @@ public class SupermarketOptimization {
 
     private List<Object> findAndStoreAllRecurringCombinations(List<String> lines) {
         logger.info(">populateCombinationsMap");
+//        for (int i = 0; i < 500; i++) {
         for (int i = 0; i < lines.size(); i++) {
             if(i%100==0){
                 logger.info("index: " + i + " , combinations cache put operations: " + combinationsCache.putOperations());

@@ -15,7 +15,8 @@ class SupermarketOptimizationTest {
     public static final String TEST_FILE_PATH = "retail_10.dat";
     public static final String COMPLETE_TEST_FILE_PATH = "retail_25k.dat";
     public static final String STORAGE_FOLDER_PATH = "/mnt/da7f9961-d147-4d0b-82c5-9e3594ec7170/tmp/2";
-    public static final String OUTPUT_FILE_PATH = "/tmp/output.txt";
+//    public static final String OUTPUT_FILE_PATH = "/tmp/output.txt";
+    public static final String OUTPUT_FILE_PATH = null;
 
     @Test
     void testThatICanFindCombinationsOnSmallFile() throws Exception {
