@@ -1,8 +1,11 @@
 package com.globality.supermarketOptimization;
 
+import org.paukov.combinatorics3.Generator;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.Calendar;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
@@ -11,7 +14,8 @@ import java.util.stream.Stream;
 
 public class SupermarketOptimization {
     public static final int MIN_NUMBER_OF_IDS_PER_LINE = 3;
-    ConcurrentHashMap<String,Integer> mapOfProducts = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<String,Integer> mapOfProducts = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<String,Integer> mapOfCombinations = new ConcurrentHashMap<>();
 
     public static void main(String[] args) throws IOException {
         String fileName = args[0];
@@ -30,12 +34,43 @@ public class SupermarketOptimization {
 
             List<String> linesPrepared = filterLinesByNumberOfIdsPerLine(linesWithIdsFilteredByTotalCount.stream(), MIN_NUMBER_OF_IDS_PER_LINE);
 
-            return linesPrepared.stream()
-                    .collect(Collectors.joining( System.lineSeparator()));
+            populateCombinationsMap(linesPrepared.stream());
+
+            return createReportOfCombinations(sigma);
         }
     }
 
+    private void log(String s) {
+        System.out.println(Calendar.getInstance().getTime().toString() + " " + s );
+    }
+
+    private String createReportOfCombinations(Integer sigma) {
+        log(">populateCombinationsMap");
+        return "Item size, Nb occurences, values" + System.lineSeparator() + mapOfCombinations.entrySet().stream()
+//                .sorted(Comparator.comparing()
+                .filter(combination -> combination.getValue()>=sigma)
+
+                .map(entry -> {
+                    return entry.getKey().toString().split(" ").length + ", " + entry.getValue() + ", " +entry.getKey() ;
+                })
+                .collect(Collectors.joining( System.lineSeparator()));
+    }
+
+    private void populateCombinationsMap(Stream<String> linesStream) {
+        log(">populateCombinationsMap");
+        linesStream.forEach(line -> {
+            String[] ids = line.split(" ");
+            Generator.combination(ids)
+                    .simple(3)
+                    .forEach(combination -> {
+                        mapOfCombinations.compute(String.join(" ", combination),
+                                (stringCombination, count) -> count == null ? 1 : count + 1);
+                    });
+        });
+    }
+
     private List<String> filterIdsWhichOccurLessThanSigma(Stream<String> linesStream, Integer sigma) {
+        log(">filterIdsWhichOccurLessThanSigma");
         return linesStream
                 .map(line -> {
                     List<String> ids = Stream.of(line.split(" "))
@@ -51,6 +86,7 @@ public class SupermarketOptimization {
     }
 
     private List<String> filterLinesByNumberOfIdsPerLine(Stream<String> linesStream, int minNumberOfIdsPerLine) {
+        log(">filterLinesByNumberOfIdsPerLine");
         return linesStream
                 .map(line -> {
                     String[] products = line.split(" ");
@@ -64,11 +100,12 @@ public class SupermarketOptimization {
     }
 
     private void populateProductsCountMap(Stream<String> linesStream) {
+        log(">populateProductsCountMap");
         linesStream
             .forEach(line -> {
                 String[] products = line.split(" ");
                 Stream.of(products).forEach(id -> {
-                    mapOfProducts.compute(id, (k, v) -> v == null ? 1 : v + 1);
+                    mapOfProducts.compute(id, (idKey, count) -> count == null ? 1 : count + 1);
                 });
             });
     }
