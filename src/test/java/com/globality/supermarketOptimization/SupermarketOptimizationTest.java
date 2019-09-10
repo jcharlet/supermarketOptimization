@@ -48,8 +48,4 @@ class SupermarketOptimizationTest {
         System.out.println(output);
     }
 
-//    private ConcurrentHashMap<String,Integer> mapOfCombinations = new ConcurrentHashMap<>();
-    private List<String> mapOfCombinations = new ArrayList<>();
-
-
 }

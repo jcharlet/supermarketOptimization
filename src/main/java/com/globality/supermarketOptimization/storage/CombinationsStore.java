@@ -42,8 +42,8 @@ public class CombinationsStore {
         combinationsCache = cacheManager
                 .createCache(CACHE_NAME, CacheConfigurationBuilder.newCacheConfigurationBuilder(
                     String.class, CombinationInfo.class, ResourcePoolsBuilder.newResourcePoolsBuilder()
-                                .heap(4000, MemoryUnit.MB)
-                                .disk(50, MemoryUnit.GB,false)
+                                .heap(6000, MemoryUnit.MB)
+                                .disk(60, MemoryUnit.GB,false)
                 ));
     }
     public void close(){
