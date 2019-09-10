@@ -9,6 +9,8 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -23,35 +25,49 @@ public class SupermarketOptimization {
     public static final int MIN_NUMBER_OF_IDS_PER_LINE = 3;
     private ConcurrentHashMap<String,Integer> mapOfProducts = new ConcurrentHashMap<>();
     private ConcurrentHashMap<String, CombinationInfo> mapOfCombinations = new ConcurrentHashMap<>();
-    private CombinationsStore combinationsCache = new CombinationsStore("/mnt/da7f9961-d147-4d0b-82c5-9e3594ec7170/tmp");
+    private CombinationsStore combinationsCache;
 
     /**
      * Command Line Interface to run the application on a transaction database
-     * @param args: filePath, sigma
+     * @param args: filePath, sigma, storageFolderPath, outputFilepath
      * @throws IOException
      */
     public static void main(String[] args) throws IOException {
+        if(args.length!=4){
+            System.out.println("To run this command line interface, please provide all the following arguments:\n"
+            +"java -jar java-interview-exercises-1.0-SNAPSHOT.jar <transactions database file> <sigma> <parent directory for store> <output filepath>\n"
+            +"e.g. java -Xmx4g -jar java-interview-exercises-1.0-SNAPSHOT.jar retail_25k.dat 4 \"/tmp/globalityCache\" \"/tmp/output.txt\"\n");
+            System.exit(1);
+        }
         String filePath = args[0];
         String sigma = args[1];
+        String storageFolderPath = args[2];
+        String outputFilepath = args[3];
 
         SupermarketOptimization supermarketOptimization = new SupermarketOptimization();
-        System.out.print(supermarketOptimization.analyseFile(filePath, Integer.valueOf(sigma)));
+        supermarketOptimization.analyseFile(filePath, Integer.valueOf(sigma), storageFolderPath, outputFilepath);
+
+        supermarketOptimization.combinationsCache.close();
+        System.exit(0);
     }
 
     /**
      * Main method to process a file and create a report on its combinations
      * @param fileName
      * @param sigma
+     * @param storageFolderPath
+     * @param outputFilepath
      * @return
      * @throws IOException
      */
-    public String analyseFile(String fileName, Integer sigma) throws IOException{
+    public String analyseFile(String fileName, Integer sigma, String storageFolderPath, String outputFilepath) throws IOException{
+        combinationsCache = new CombinationsStore(storageFolderPath);
         try(Stream<String> linesStream = Files.lines(new File(fileName).toPath())){
             List<String> linesPrepared = cleanDataset(sigma, linesStream);
 
             findAndStoreAllRecurringCombinations(linesPrepared);
 
-            return createReportOfCombinations(sigma);
+            return createReportOfCombinations(sigma, outputFilepath);
         }
     }
 
@@ -65,7 +81,7 @@ public class SupermarketOptimization {
         return filterLinesByNumberOfIdsPerLine(linesWithIdsFilteredByTotalCount.stream(), MIN_NUMBER_OF_IDS_PER_LINE);
     }
 
-    private String createReportOfCombinations(Integer sigma) {
+    private String createReportOfCombinations(Integer sigma, String outputFilepath) throws IOException {
         logger.info(">createReportOfCombinations");
 
         StringBuilder stringBuilder = new StringBuilder();
@@ -74,14 +90,22 @@ public class SupermarketOptimization {
         logger.info(headerLine);
         stringBuilder.append(headerLine);
 
+        Files.write(Paths.get(outputFilepath),headerLine.getBytes());
+
         combinationsCache.getIterator().forEachRemaining(
             combination -> {
-                String line = combination.getKey().toString().split(" ").length + ", " + combination.getValue() + ", " + combination.getKey();
+                String line = combination.getKey().split(" ").length + ", " + combination.getValue() + ", " + combination.getKey();
                 logger.info(line);
                 stringBuilder.append(System.lineSeparator());
                 stringBuilder.append(line);
+                try {
+                    Files.write(Paths.get(outputFilepath),(System.lineSeparator()+line).getBytes(), StandardOpenOption.APPEND);
+                } catch (IOException e) {
+                    logger.error("writing to file failed");
+                }
             }
         );
+        logger.info("the combinations can be found in the output file you provided: " + outputFilepath);
         return stringBuilder.toString();
     }
 

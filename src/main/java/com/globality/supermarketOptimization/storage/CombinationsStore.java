@@ -36,7 +36,7 @@ public class CombinationsStore {
         cacheManager = CacheManagerBuilder
                 .newCacheManagerBuilder()
                 .using(statisticsService)
-                .with(CacheManagerBuilder.persistence(new File(storageFolderPath, "globalityCache")))
+                .with(CacheManagerBuilder.persistence(new File(storageFolderPath)))
                 .build(true);
 
         combinationsCache = cacheManager
@@ -45,6 +45,9 @@ public class CombinationsStore {
                                 .heap(4000, MemoryUnit.MB)
                                 .disk(50, MemoryUnit.GB,false)
                 ));
+    }
+    public void close(){
+        cacheManager.close();
     }
 
     /**

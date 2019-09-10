@@ -28,7 +28,17 @@ On laptop with 8 cores, using 4gb of memory and max space of 50gb on disk,
 it took 2h30min to complete the analysis.
 It stored 200 millions combinations and among them Y unique combinations with at least 4 occurrences.
 
-## Improvements
+# How to run it
+Either Download the jar file
+
+Or create the jar file in the repository folder:
+`mvn package`
+
+Then run it the following way with java 8: 
+`java -jar java-interview-exercises-1.0-SNAPSHOT.jar <transactions database file> <sigma> <parent directory for store> <output filepath>`
+`java -Xmx4g -jar java-interview-exercises-1.0-SNAPSHOT.jar retail_25k.dat 4 "/tmp/globalityCache" "/tmp/output.txt"` 
+
+# Improvements
 - ehCache is a caching system, not a database even if it can be used as such.
 I chose to use it because I wanted a very simple key value store that can use both the heap and the disk to manage the large amount of combinations we have, and which can be directly embedded in the application without running a separate service.
 <br/>

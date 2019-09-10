@@ -8,3 +8,4 @@ heap*
 javacore*
 Snap*
 src/test/java/com/globality/supermarketOptimization/TmpTest.java
+dependency-reduced-pom.xml
