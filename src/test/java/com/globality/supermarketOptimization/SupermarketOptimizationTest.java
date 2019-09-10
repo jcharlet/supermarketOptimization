@@ -36,7 +36,7 @@ class SupermarketOptimizationTest {
         System.out.println(output);
         assertEquals(  "Item size, Nb occurences, values\n" +
                 "3, 2, 36 38 39\n" +
-                "3, 3, 38 39 48",output);
+                "3, 3, 38 39 48\n",output);
     }
 
     @Test

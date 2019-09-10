@@ -1,6 +1,8 @@
 package com.globality.supermarketOptimization;
 
 import org.paukov.combinatorics3.Generator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -13,10 +15,13 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 public class SupermarketOptimization {
+
+    final private Logger logger = LoggerFactory.getLogger(this.getClass());
+
     public static final int MIN_NUMBER_OF_IDS_PER_LINE = 3;
     private ConcurrentHashMap<String,Integer> mapOfProducts = new ConcurrentHashMap<>();
     private ConcurrentHashMap<String,Combination> mapOfCombinations = new ConcurrentHashMap<>();
-
+    private CacheHelper combinationsCache = new CacheHelper();
     public static void main(String[] args) throws IOException {
         String fileName = args[0];
         String sigma = args[1];
@@ -40,28 +45,32 @@ public class SupermarketOptimization {
         }
     }
 
-    private void log(String s) {
-        System.out.println(Calendar.getInstance().getTime().toString() + " " + s );
-    }
-
     private String createReportOfCombinations(Integer sigma) {
-        log(">createReportOfCombinations");
-        return "Item size, Nb occurences, values" + System.lineSeparator() + mapOfCombinations.entrySet().stream()
-//                .sorted(Comparator.comparing()
-                .filter(combination -> combination.getValue().count>=sigma)
+        logger.info(">createReportOfCombinations");
 
-                .map(entry -> {
-                    return entry.getKey().toString().split(" ").length + ", " + entry.getValue() + ", " +entry.getKey() ;
-                })
-                .collect(Collectors.joining( System.lineSeparator()));
+        StringBuilder stringBuilder = new StringBuilder();
+
+        String headerLine = "Item size, Nb occurences, values" + System.lineSeparator();
+        logger.info(headerLine);
+        stringBuilder.append(headerLine);
+
+        combinationsCache.getCombinationsCache().spliterator().forEachRemaining(
+            combination -> {
+                String line = combination.getKey().toString().split(" ").length + ", " + combination.getValue() + ", " + combination.getKey();
+                logger.info(line);
+                stringBuilder.append(line);
+                stringBuilder.append(System.lineSeparator());
+            }
+        );
+        return stringBuilder.toString();
     }
 
     private List<Object> populateCombinationsMap(List<String> lines) {
-        log(">populateCombinationsMap");
-//        for (int i = 0; i < lines.size(); i++) {
-        for (int i = 0; i < 500; i++) {
+        logger.info(">populateCombinationsMap");
+        for (int i = 0; i < lines.size(); i++) {
+//        for (int i = 0; i < 1000; i++) {
             if(i%100==0){
-                log("index: " + i + " , mapOfCombinations size: " + mapOfCombinations.size());
+                logger.info("index: " + i + " , combinations cache put operations: " + combinationsCache.putOperations());
             }
             String line1 = lines.get(i);
             int indexLine1 = i;
@@ -69,10 +78,6 @@ public class SupermarketOptimization {
             IntStream.range(0, lines.size())
                     .filter(indexLine2 -> indexLine2 != indexLine1)
                     .mapToObj(indexLine2 -> {
-//                        int countLines2 = atomicInteger.incrementAndGet();
-//                        if(countLines2 %2500==0){
-//                            log("        nb elements processed from lines2: " + countLines2 );
-//                        }
                         String line2 = lines.get(indexLine2);
                         List<String> line1Ids = Arrays.asList(line1.split(" "));
                         List<String> line2Ids = Arrays.asList(line2.split(" "));
@@ -82,17 +87,7 @@ public class SupermarketOptimization {
                             Generator.combination(commonCombinations)
                                     .simple(k)
                                     .forEach(combination -> {
-                                        mapOfCombinations.compute(String.join(" ", combination),
-                                                (stringCombination, combinationContainer) -> {
-                                            if(combinationContainer== null){
-                                                combinationContainer = new Combination();
-                                            }
-                                            if(!combinationContainer.lines.contains(indexLine2)){
-                                                combinationContainer.lines.add(indexLine2);
-                                                combinationContainer.count+=1;
-                                            }
-                                            return combinationContainer;
-                                        });
+                                        combinationsCache.addCombinationIfMissing(String.join(" ", combination),indexLine2);
                                     });
                         }
                         return null;
@@ -103,7 +98,7 @@ public class SupermarketOptimization {
     }
 
     private List<String> filterIdsWhichOccurLessThanSigma(Stream<String> linesStream, Integer sigma) {
-        log(">filterIdsWhichOccurLessThanSigma");
+        logger.info(">filterIdsWhichOccurLessThanSigma");
         return linesStream
                 .map(line -> {
                     List<String> ids = Stream.of(line.split(" "))
@@ -119,7 +114,7 @@ public class SupermarketOptimization {
     }
 
     private List<String> filterLinesByNumberOfIdsPerLine(Stream<String> linesStream, int minNumberOfIdsPerLine) {
-        log(">filterLinesByNumberOfIdsPerLine");
+        logger.info(">filterLinesByNumberOfIdsPerLine");
         return linesStream
                 .map(line -> {
                     String[] products = line.split(" ");
@@ -133,7 +128,7 @@ public class SupermarketOptimization {
     }
 
     private void populateProductsCountMap(Stream<String> linesStream) {
-        log(">populateProductsCountMap");
+        logger.info(">populateProductsCountMap");
         linesStream
             .forEach(line -> {
                 String[] products = line.split(" ");
@@ -143,13 +138,4 @@ public class SupermarketOptimization {
             });
     }
 
-    private class Combination {
-        Integer count = 0;
-        List<Integer> lines = new ArrayList<>();
-
-        @Override
-        public String toString() {
-            return String.valueOf(count);
-        }
-    }
 }
