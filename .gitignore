@@ -3,3 +3,8 @@ out/
 .idea/
 lib/
 target/
+core*
+heap*
+javacore*
+Snap*
+src/test/java/com/globality/supermarketOptimization/TmpTest.java
