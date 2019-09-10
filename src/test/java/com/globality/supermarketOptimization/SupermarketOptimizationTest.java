@@ -46,7 +46,7 @@ class SupermarketOptimizationTest {
 
         //when I execute function
         String filePath = Paths.get(getClass().getClassLoader().getResource(COMPLETE_TEST_FILE_PATH).getFile()).toAbsolutePath().toString();
-        String output = supermarketOptimization.analyseFile(filePath,3);
+        String output = supermarketOptimization.analyseFile(filePath,4);
 
         // then I get expected value
         File file = new File(getClass().getClassLoader().getResource(COMPLETE_TEST_FILE_PATH).getFile());
