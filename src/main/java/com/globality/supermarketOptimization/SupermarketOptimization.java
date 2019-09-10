@@ -1,5 +1,7 @@
 package com.globality.supermarketOptimization;
 
+import com.globality.supermarketOptimization.domain.CombinationInfo;
+import com.globality.supermarketOptimization.storage.CombinationsStore;
 import org.paukov.combinatorics3.Generator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,29 +22,47 @@ public class SupermarketOptimization {
 
     public static final int MIN_NUMBER_OF_IDS_PER_LINE = 3;
     private ConcurrentHashMap<String,Integer> mapOfProducts = new ConcurrentHashMap<>();
-    private ConcurrentHashMap<String,Combination> mapOfCombinations = new ConcurrentHashMap<>();
-    private CacheHelper combinationsCache = new CacheHelper();
+    private ConcurrentHashMap<String, CombinationInfo> mapOfCombinations = new ConcurrentHashMap<>();
+    private CombinationsStore combinationsCache = new CombinationsStore("/mnt/da7f9961-d147-4d0b-82c5-9e3594ec7170/tmp");
+
+    /**
+     * Command Line Interface to run the application on a transaction database
+     * @param args: filePath, sigma
+     * @throws IOException
+     */
     public static void main(String[] args) throws IOException {
-        String fileName = args[0];
+        String filePath = args[0];
         String sigma = args[1];
 
-        System.out.print(new SupermarketOptimization().analyseFile(fileName, Integer.valueOf(sigma)));
+        SupermarketOptimization supermarketOptimization = new SupermarketOptimization();
+        System.out.print(supermarketOptimization.analyseFile(filePath, Integer.valueOf(sigma)));
     }
 
+    /**
+     * Main method to process a file and create a report on its combinations
+     * @param fileName
+     * @param sigma
+     * @return
+     * @throws IOException
+     */
     public String analyseFile(String fileName, Integer sigma) throws IOException{
         try(Stream<String> linesStream = Files.lines(new File(fileName).toPath())){
-            List<String> linesFilteredOnNumberOfElements = filterLinesByNumberOfIdsPerLine(linesStream, MIN_NUMBER_OF_IDS_PER_LINE);
+            List<String> linesPrepared = cleanDataset(sigma, linesStream);
 
-            populateProductsCountMap(linesFilteredOnNumberOfElements.stream());
-
-            List<String> linesWithIdsFilteredByTotalCount = filterIdsWhichOccurLessThanSigma(linesFilteredOnNumberOfElements.stream(), sigma);
-
-            List<String> linesPrepared = filterLinesByNumberOfIdsPerLine(linesWithIdsFilteredByTotalCount.stream(), MIN_NUMBER_OF_IDS_PER_LINE);
-
-            populateCombinationsMap(linesPrepared);
+            findAndStoreAllRecurringCombinations(linesPrepared);
 
             return createReportOfCombinations(sigma);
         }
+    }
+
+    private List<String> cleanDataset(Integer sigma, Stream<String> linesStream) {
+        List<String> linesFilteredOnNumberOfElements = filterLinesByNumberOfIdsPerLine(linesStream, MIN_NUMBER_OF_IDS_PER_LINE);
+
+        countProductIdsOccurrences(linesFilteredOnNumberOfElements.stream());
+
+        List<String> linesWithIdsFilteredByTotalCount = filterProductIdsWhichOccurLessThanSigma(linesFilteredOnNumberOfElements.stream(), sigma);
+
+        return filterLinesByNumberOfIdsPerLine(linesWithIdsFilteredByTotalCount.stream(), MIN_NUMBER_OF_IDS_PER_LINE);
     }
 
     private String createReportOfCombinations(Integer sigma) {
@@ -50,25 +70,24 @@ public class SupermarketOptimization {
 
         StringBuilder stringBuilder = new StringBuilder();
 
-        String headerLine = "Item size, Nb occurences, values" + System.lineSeparator();
+        String headerLine = "Item size, Nb occurences, values";
         logger.info(headerLine);
         stringBuilder.append(headerLine);
 
-        combinationsCache.getCombinationsCache().spliterator().forEachRemaining(
+        combinationsCache.getIterator().forEachRemaining(
             combination -> {
                 String line = combination.getKey().toString().split(" ").length + ", " + combination.getValue() + ", " + combination.getKey();
                 logger.info(line);
-                stringBuilder.append(line);
                 stringBuilder.append(System.lineSeparator());
+                stringBuilder.append(line);
             }
         );
         return stringBuilder.toString();
     }
 
-    private List<Object> populateCombinationsMap(List<String> lines) {
+    private List<Object> findAndStoreAllRecurringCombinations(List<String> lines) {
         logger.info(">populateCombinationsMap");
         for (int i = 0; i < lines.size(); i++) {
-//        for (int i = 0; i < 1000; i++) {
             if(i%100==0){
                 logger.info("index: " + i + " , combinations cache put operations: " + combinationsCache.putOperations());
             }
@@ -87,17 +106,17 @@ public class SupermarketOptimization {
                             Generator.combination(commonCombinations)
                                     .simple(k)
                                     .forEach(combination -> {
-                                        combinationsCache.addCombinationIfMissing(String.join(" ", combination),indexLine2);
+                                        combinationsCache.addIfMissing(String.join(" ", combination),indexLine2);
                                     });
                         }
                         return null;
                     })
-                    .count();
+                    .count(); //this .count() method is unused and only serves to execute the processing of the stream
         }
         return null;
     }
 
-    private List<String> filterIdsWhichOccurLessThanSigma(Stream<String> linesStream, Integer sigma) {
+    private List<String> filterProductIdsWhichOccurLessThanSigma(Stream<String> linesStream, Integer sigma) {
         logger.info(">filterIdsWhichOccurLessThanSigma");
         return linesStream
                 .map(line -> {
@@ -127,8 +146,8 @@ public class SupermarketOptimization {
                 .collect(Collectors.toList());
     }
 
-    private void populateProductsCountMap(Stream<String> linesStream) {
-        logger.info(">populateProductsCountMap");
+    private void countProductIdsOccurrences(Stream<String> linesStream) {
+        logger.info(">countProductIdsOccurrences");
         linesStream
             .forEach(line -> {
                 String[] products = line.split(" ");

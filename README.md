@@ -1,3 +1,5 @@
+# Exercise Description
+
 You’ve been hired as a market consultant to try and help a local supermarket come up with better placement of items based on buyer’s preferences, and towards that goal you’d like to identify certain association rules based on existing records of buyer’s transactions. 
 
  
@@ -11,3 +13,30 @@ Implement, in Python or Java, an efficient algorithm for generating all frequen
 
  
 For example, given a value of sigma = 2, all sets of 3 items or more that appear 2 or more times together in the transaction log should be returned. The results should be returned as a file with the following format: <item set size (N)>, <co-occurrence frequency>, <item 1 id >, <item 2 id>, …. <item N id>  Run the algorithm on the attached transaction log file and provide the results obtained for a value of sigma = 4.
+
+# Solution proposed
+As a first working prototype, 
+- I clean the data (remove lines with less than 3 items, remove product ids which occur less than sigma times)
+- I compare all the rows of the transaction database with themselves
+- find all common product ids
+- generate all possible combinations with 3 or more items
+- store them in storage engine using both memory and disk
+- filter combinations appearing less than sigma times
+- display the results as requested in the app log
+
+On laptop with 8 cores, using 4gb of memory and max space of 50gb on disk,
+it took 2h30min to complete the analysis.
+It stored 200 millions combinations and among them Y unique combinations with at least 4 occurrences.
+
+## Improvements
+- ehCache is a caching system, not a database even if it can be used as such.
+I chose to use it because I wanted a very simple key value store that can use both the heap and the disk to manage the large amount of combinations we have, and which can be directly embedded in the application without running a separate service.
+<br/>
+I would evaluate different solutions (postgreSQL, Mongo, Redis, Neo4j, etc) based on the following needs:
+-- atomic updates, speed of writing, storage on disk 
+
+- I considered using Neo4j, but didn't find an obvious solution in a first quick search of its graph algorithms. Given that it's just an interview exercise, I didn't want to add the extra effort to learn again neo4j that I haven't used for 5years.
+Nevertheless, it might be helpful in that case to use a graph database or even some clustering algorithm. Something to explore with more time.
+
+- the current configuration of the storage use primarily the disk and less so the heap. It's required since the amount to store is very large but it also makes the whole system quite slow. Also considering the amount of possible combinations (nearly 200 millions total occurrences half way through), it would make sense, depending on the budget, to run this on a server with a large amount of memory or a cluster of servers with database partitions. UsRunning it on my laptop was really challenging.
+ 
