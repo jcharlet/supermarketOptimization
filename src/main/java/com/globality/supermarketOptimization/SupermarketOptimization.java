@@ -97,8 +97,7 @@ public class SupermarketOptimization {
                         }
                         return null;
                     })
-                    .filter(Objects::nonNull)
-                    .collect(Collectors.toList());
+                    .count();
         }
         return null;
     }
